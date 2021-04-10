@@ -72,7 +72,7 @@ Symbols *add_new_sym(Symbol *src, Symbols *dst, bool *altered) {
 
 Symbols *add_all_new_syms(Symbols *src, Symbols *dst, bool *altered) {
     while (src) {
-        // Do not copy epsilons into list (useful for computing first)
+        // Do not copy epsilons into list (useful for computing first and follow)
         if (src->sym->type != EPSILON_SYM) {
             dst = add_new_sym(src->sym, dst, altered);
         }
@@ -134,7 +134,35 @@ void compute_first(Grammar *g) {
 }
 
 void compute_follow(Grammar *g) {
-    
+    g->start->follow = add_sym(eof(), g->start->follow);
+    bool altered;
+    do {
+        altered = false;
+        Productions *prods = g->prods;
+        while (prods) {
+            Production *prod = prods->prod;
+            Symbol *head = prod->head;
+            Symbol **body = prod->body;
+            uint32_t body_size = prod->body_size;
+            for (uint32_t i = 0; i < body_size-1; i++) {
+                Symbol *sym = body[i];
+                SymbolType t = sym->type;
+                Symbol *next = body[i+1];
+                Symbols *next_first = next->first;
+                if (t == NON_TERMINAL_SYM) {
+                    sym->follow = add_all_new_syms(next_first, sym->follow, &altered);
+                    if (contains_sym_type(EPSILON_SYM, next_first)) {
+                        sym->follow = add_all_new_syms(head->follow, sym->follow, &altered);
+                    }
+                }
+            }
+            Symbol *last = body[body_size-1];
+            if (last->type == NON_TERMINAL_SYM) {
+                last->follow = add_all_new_syms(head->follow, last->follow, &altered);
+            }
+            prods = prods->next;
+        }
+    } while (altered);
 }
 
 Symbol *symbol(SymbolType type, char *name) {
@@ -204,11 +232,10 @@ Grammar *grammar(Symbol *start, uint32_t prod_count, ...) {
 
     Grammar *g = malloc_or_die(sizeof(Grammar));
     g->augstart = augstart();
+    prods = add_prod(production(g->augstart, 1, start), prods);
+    g->start = start;
     g->syms = syms;
     g->prods = prods;
-
-    print_syms(g->syms);
-    printf("\n");
 
     compute_first(g);
     compute_follow(g);

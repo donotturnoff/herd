@@ -41,6 +41,7 @@ typedef struct item {
 } Item;
 
 typedef struct grammar {
+    Symbol *start;
     Symbol *augstart;
     Symbols *syms;
     Productions *prods;
