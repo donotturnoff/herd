@@ -1,0 +1,2 @@
+- Think about replacing first and follow "sets" with lists (remove uniqueness guarantee, faster but larger and probably still correct)
+- Improve data structures used for Productions and Symbols

@@ -42,7 +42,10 @@ typedef struct item {
 
 typedef struct grammar {
     Symbol *start;
+    Symbol *eof;
+    Symbol *epsilon;
     Symbol *augstart;
+    Production *augstart_prod;
     Symbols *syms;
     Productions *prods;
 } Grammar;
@@ -51,11 +54,13 @@ void print_sym(Symbol *sym);
 void print_syms(Symbols *syms);
 Symbol *nonterminal(char *name);
 Symbol *terminal(char *name);
-Symbol *augstart(void);
 Symbol *eof(void);
 Symbol *epsilon(void);
 Production *production(Symbol *head, uint32_t body_size, ...);
 Item *item(Production *prod, uint32_t index);
 Grammar *grammar(Symbol *start, uint32_t prod_count, ...);
+void free_symbol(Symbol *sym);
+void free_production(Production *prod);
+void free_grammar(Grammar *g);
 
 void *malloc_or_die(size_t size);

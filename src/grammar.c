@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 void print_sym(Symbol *sym) {
     switch (sym->type) {
@@ -81,9 +82,9 @@ Symbols *add_all_new_syms(Symbols *src, Symbols *dst, bool *altered) {
     return dst;
 }
 
-bool contains_sym_type(SymbolType sym_type, Symbols *syms) {
+bool contains_epsilon(Symbols *syms) {
     while (syms) {
-        if (syms->sym->type == sym_type) {
+        if (syms->sym->type == EPSILON_SYM) {
             return true;
         }
         syms = syms->next;
@@ -121,12 +122,12 @@ void compute_first(Grammar *g) {
                 Symbol *sym = body[i];
                 Symbols *first = sym->first;
                 head->first = add_all_new_syms(first, head->first, &altered);
-                if (!contains_sym_type(EPSILON_SYM, first)) {
+                if (!contains_epsilon(first)) {
                     break;
                 }
             }
             if (i == body_size) { // Epsilon present in first set of every symbol in production
-                head->first = add_new_sym(epsilon(), head->first, &altered);
+                head->first = add_new_sym(g->epsilon, head->first, &altered);
             }
             prods = prods->next;
         }
@@ -134,7 +135,7 @@ void compute_first(Grammar *g) {
 }
 
 void compute_follow(Grammar *g) {
-    g->start->follow = add_sym(eof(), g->start->follow);
+    g->start->follow = add_sym(g->eof, g->start->follow);
     bool altered;
     do {
         altered = false;
@@ -151,7 +152,7 @@ void compute_follow(Grammar *g) {
                 Symbols *next_first = next->first;
                 if (t == NON_TERMINAL_SYM) {
                     sym->follow = add_all_new_syms(next_first, sym->follow, &altered);
-                    if (contains_sym_type(EPSILON_SYM, next_first)) {
+                    if (contains_epsilon(next_first)) {
                         sym->follow = add_all_new_syms(head->follow, sym->follow, &altered);
                     }
                 }
@@ -172,6 +173,22 @@ Symbol *symbol(SymbolType type, char *name) {
     sym->first = NULL;
     sym->follow = NULL;
     return sym;
+}
+
+void free_symbol(Symbol *sym) {
+    Symbols *first = sym->first;
+    while (first) {
+        Symbols *next = first->next;
+        free(first);
+        first = next;
+    }
+    Symbols *follow = sym->follow;
+    while (follow) {
+        Symbols *next = follow->next;
+        free(follow);
+        follow = next;
+    }
+    free(sym);
 }
 
 Symbol *nonterminal(char *name) {
@@ -211,6 +228,11 @@ Production *production(Symbol *head, uint32_t body_size, ...) {
     return prod;
 }
 
+void free_production(Production *prod) {
+    free(prod->body);
+    free(prod);
+}
+
 Grammar *grammar(Symbol *start, uint32_t prod_count, ...) {
     Productions *prods = NULL;
     Symbols *syms = NULL;
@@ -231,8 +253,11 @@ Grammar *grammar(Symbol *start, uint32_t prod_count, ...) {
     va_end(ap);
 
     Grammar *g = malloc_or_die(sizeof(Grammar));
+    g->eof = eof();
+    g->epsilon = epsilon();
     g->augstart = augstart();
-    prods = add_prod(production(g->augstart, 1, start), prods);
+    g->augstart_prod = production(g->augstart, 1, start);
+    prods = add_prod(g->augstart_prod, prods);
     g->start = start;
     g->syms = syms;
     g->prods = prods;
@@ -241,4 +266,24 @@ Grammar *grammar(Symbol *start, uint32_t prod_count, ...) {
     compute_follow(g);
 
     return g;
+}
+
+void free_grammar(Grammar *g) {
+    free_symbol(g->eof);
+    free_symbol(g->epsilon);
+    free_symbol(g->augstart);
+    free_production(g->augstart_prod);
+    Productions *prods = g->prods;
+    while (prods) {
+        Productions *next = prods->next;
+        free(prods);
+        prods = next;
+    }
+    Symbols *syms = g->syms;
+    while (syms) {
+        Symbols *next = syms->next;
+        free(syms);
+        syms = next;
+    }
+    free(g);
 }
