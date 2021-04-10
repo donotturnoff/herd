@@ -26,7 +26,8 @@ typedef struct symbols {
 
 typedef struct production {
     Symbol *head;
-    Symbols *body;
+    uint32_t body_size;
+    Symbol **body;
 } Production;
 
 typedef struct productions {
@@ -45,10 +46,13 @@ typedef struct grammar {
     Productions *prods;
 } Grammar;
 
+void print_sym(Symbol *sym);
+void print_syms(Symbols *syms);
 Symbol *nonterminal(char *name);
 Symbol *terminal(char *name);
 Symbol *augstart(void);
 Symbol *eof(void);
+Symbol *epsilon(void);
 Production *production(Symbol *head, uint32_t body_size, ...);
 Item *item(Production *prod, uint32_t index);
 Grammar *grammar(Symbol *start, uint32_t prod_count, ...);

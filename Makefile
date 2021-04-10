@@ -2,16 +2,16 @@
 .SUFFIXES: .c .o
 
 CC=gcc
-CFLAGS=-Wall --pedantic -std=c99 -fsanitize=address
+CFLAGS=-Wall --pedantic -std=c99 #-fsanitize=address
 LDLIBS=
 OBJDIR=obj
 vpath %.c src
 vpath %.h src
 
-objects = $(addprefix $(OBJDIR)/, grammar.o utils.o )
+objects = $(addprefix $(OBJDIR)/, grammar.o utils.o first_test.o )
 
-utlami : $(objects)
-	$(CC) $(CFLAGS) -o utlami $(objects) $(LDLIBS)
+herd : $(objects)
+	$(CC) $(CFLAGS) -o herd $(objects) $(LDLIBS)
 
 $(OBJDIR)/%.o : %.c herd.h
 	$(CC) -c $(CFLAGS) $< -o $@
